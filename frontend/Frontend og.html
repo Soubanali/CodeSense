@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CodeSense</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050810;
+    --panel: #080d1a;
+    --border: #0ff3;
+    --cyan: #00f5ff;
+    --green: #00ff88;
+    --red: #ff3c6e;
+    --yellow: #ffdd00;
+    --text: #c8e6f5;
+    --dim: #4a6a7a;
+    --glow: 0 0 12px #00f5ff88;
+    --glow-g: 0 0 12px #00ff8888;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,245,255,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,245,255,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 0 20px 60px; }
+
+  header {
+    display: flex; align-items: center; gap: 16px;
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .logo-icon {
+    width: 44px; height: 44px;
+    border: 2px solid var(--cyan);
+    border-radius: 6px;
+    display: grid; place-items: center;
+    box-shadow: var(--glow), inset 0 0 12px #00f5ff22;
+    animation: pulse 3s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+
+  .logo-icon svg { width: 24px; height: 24px; fill: var(--cyan); }
+
+  @keyframes pulse {
+    0%, 100% { box-shadow: var(--glow), inset 0 0 12px #00f5ff22; }
+    50% { box-shadow: 0 0 24px #00f5ffbb, inset 0 0 20px #00f5ff44; }
+  }
+
+  .logo-text {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 1.8rem;
+    letter-spacing: .12em;
+    color: var(--cyan);
+    text-shadow: 0 0 20px #00f5ff99;
+  }
+
+  .logo-sub { font-size: .65rem; color: var(--dim); letter-spacing: .2em; margin-top: 2px; }
+
+  .header-tag {
+    margin-left: auto;
+    font-size: .6rem;
+    color: var(--green);
+    border: 1px solid var(--green);
+    padding: 3px 8px;
+    border-radius: 2px;
+    box-shadow: var(--glow-g);
+    animation: blink 2s step-end infinite;
+  }
+
+  @keyframes blink { 50% { opacity: .3; } }
+
+  .modes {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+
+  .mode-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .72rem;
+    letter-spacing: .1em;
+    padding: 10px 6px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all .2s;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+  }
+
+  .mode-btn .m-icon { font-size: 1.2rem; }
+  .mode-btn:hover { border-color: var(--cyan); color: var(--cyan); background: #00f5ff0a; }
+
+  .mode-btn.active {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: #00f5ff12;
+    box-shadow: var(--glow);
+  }
+
+  .mode-btn.active .m-icon { filter: drop-shadow(0 0 6px var(--cyan)); }
+
+  .editor-wrap {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    background: var(--panel);
+    margin-bottom: 16px;
+    box-shadow: 0 0 30px #00f5ff08;
+  }
+
+  .editor-bar {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 14px;
+    background: #0a1020;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot-r { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .dot-y { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+  .dot-g { background: var(--green); box-shadow: 0 0 6px var(--green); }
+
+  .editor-label {
+    margin-left: auto;
+    font-size: .6rem;
+    color: var(--dim);
+    letter-spacing: .15em;
+  }
+
+  #code-input {
+    width: 100%;
+    height: 280px;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--green);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .85rem;
+    line-height: 1.7;
+    padding: 16px 18px;
+    resize: vertical;
+    caret-color: var(--cyan);
+    tab-size: 4;
+  }
+
+  #code-input::placeholder { color: var(--dim); }
+  #code-input::-webkit-scrollbar { width: 4px; }
+  #code-input::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .run-row { display: flex; gap: 10px; align-items: center; margin-bottom: 28px; }
+
+  #run-btn {
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: .75rem;
+    letter-spacing: .15em;
+    padding: 12px 32px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all .2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  #run-btn::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: var(--cyan);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform .25s ease;
+    z-index: -1;
+  }
+
+  #run-btn:hover { color: var(--bg); box-shadow: var(--glow); }
+  #run-btn:hover::before { transform: scaleX(1); }
+  #run-btn:disabled { opacity: .4; cursor: not-allowed; }
+  #run-btn:disabled:hover::before { transform: scaleX(0); }
+  #run-btn:disabled:hover { color: var(--cyan); box-shadow: none; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--dim);
+    transition: background .3s, box-shadow .3s;
+  }
+  .status-dot.loading { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); animation: blink .6s step-end infinite; }
+  .status-dot.done { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .status-dot.error { background: var(--red); box-shadow: 0 0 8px var(--red); }
+
+  #status-txt { font-size: .65rem; color: var(--dim); letter-spacing: .1em; }
+
+  .output-wrap {
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    overflow: hidden;
+    min-height: 180px;
+    transition: border-color .3s;
+  }
+
+  .output-wrap.has-result { border-color: var(--cyan); }
+  .output-wrap.has-error { border-color: var(--red); }
+
+  .output-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 14px;
+    background: #0a1020;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .output-title {
+    font-family: 'Orbitron', monospace;
+    font-size: .6rem;
+    color: var(--cyan);
+    letter-spacing: .2em;
+  }
+
+  .copy-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--dim);
+    font-family: 'Share Tech Mono', monospace;
+    font-size: .6rem;
+    padding: 3px 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    letter-spacing: .1em;
+    transition: all .2s;
+  }
+
+  .copy-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  #output-content {
+    padding: 20px 18px;
+    font-size: .82rem;
+    line-height: 1.8;
+    color: var(--text);
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 140px;
+  }
+
+  #output-content.empty { color: var(--dim); font-style: italic; }
+
+  .cursor {
+    display: inline-block;
+    width: 2px; height: 1em;
+    background: var(--cyan);
+    animation: blink .7s step-end infinite;
+    vertical-align: text-bottom;
+    margin-left: 2px;
+  }
+
+  .spinner {
+    display: none;
+    width: 32px; height: 32px;
+    border: 2px solid var(--border);
+    border-top-color: var(--cyan);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+    margin: 40px auto;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner.show { display: block; }
+
+  footer {
+    margin-top: 40px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+    font-size: .6rem;
+    color: var(--dim);
+    letter-spacing: .15em;
+    display: flex; justify-content: space-between;
+  }
+
+  @media (max-width: 600px) {
+    .modes { grid-template-columns: repeat(2, 1fr); }
+    .logo-text { font-size: 1.3rem; }
+    .header-tag { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="logo-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M8 3L3 8l5 5M16 3l5 5-5 5M14 3l-4 18"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">CodeSense</div>
+      <div class="logo-sub">AI-POWERED PYTHON ANALYSIS ENGINE</div>
+    </div>
+    <div class="header-tag">◉ ONLINE</div>
+  </header>
+
+  <div class="modes">
+    <button class="mode-btn active" data-mode="explain">
+      <span class="m-icon">◈</span> EXPLAIN
+    </button>
+    <button class="mode-btn" data-mode="eli5">
+      <span class="m-icon">◉</span> ELI5
+    </button>
+    <button class="mode-btn" data-mode="debug">
+      <span class="m-icon">⚠</span> DEBUG
+    </button>
+    <button class="mode-btn" data-mode="optimize">
+      <span class="m-icon">⟳</span> OPTIMIZE
+    </button>
+  </div>
+
+  <div class="editor-wrap">
+    <div class="editor-bar">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+      <span class="editor-label">PYTHON INPUT ─ main.py</span>
+    </div>
+    <textarea id="code-input" spellcheck="false" placeholder="# Paste your Python code here...
+# CodeSense will analyze it using AST parsing,
+# runtime execution, and Gemini AI.
+
+def hello():
+    print('Hello, CodeSense!')
+"></textarea>
+  </div>
+
+  <div class="run-row">
+    <button id="run-btn">▶ ANALYZE</button>
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-txt">AWAITING INPUT</span>
+  </div>
+
+  <div class="output-wrap" id="output-wrap">
+    <div class="output-bar">
+      <span class="output-title" id="output-title">OUTPUT</span>
+      <button class="copy-btn" id="copy-btn" onclick="copyOutput()">COPY</button>
+    </div>
+    <div class="spinner" id="spinner"></div>
+    <div id="output-content" class="empty">─ Analysis result will appear here ─</div>
+  </div>
+
+  <footer>
+    <span>CODESENSE v1.0 ─ GEMINI BACKEND</span>
+    <span>FLASK API ─ localhost:5000</span>
+  </footer>
+
+</div>
+
+<script>
+  const BASE = 'http://127.0.0.1:5000';
+  let activeMode = 'explain';
+
+  document.querySelectorAll('.mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeMode = btn.dataset.mode;
+    });
+  });
+
+  document.getElementById('run-btn').addEventListener('click', analyze);
+  document.getElementById('code-input').addEventListener('keydown', e => {
+    if (e.ctrlKey && e.key === 'Enter') analyze();
+  });
+
+  async function analyze() {
+    const code = document.getElementById('code-input').value.trim();
+    if (!code) { setStatus('error', 'NO CODE PROVIDED'); return; }
+
+    const btn = document.getElementById('run-btn');
+    btn.disabled = true;
+    setStatus('loading', 'PROCESSING...');
+    showSpinner(true);
+    clearOutput();
+
+    const endpointMap = { explain: '/explain', eli5: '/eli5', debug: '/debug', optimize: '/optimize' };
+    const url = BASE + endpointMap[activeMode];
+
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code })
+      });
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const text = extractText(data);
+      showSpinner(false);
+      typewrite(text);
+      setStatus('done', 'ANALYSIS COMPLETE');
+      document.getElementById('output-wrap').classList.add('has-result');
+    } catch (err) {
+      showSpinner(false);
+      showError(err.message);
+      setStatus('error', 'REQUEST FAILED');
+      document.getElementById('output-wrap').classList.add('has-error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  function extractText(data) {
+    return data.Explanation
+        || data.Eli5_Explanation
+        || data.bugs_explanation
+        || data.Optimized_code
+        || JSON.stringify(data, null, 2);
+  }
+
+  function typewrite(text) {
+    const el = document.getElementById('output-content');
+    el.classList.remove('empty');
+    el.textContent = '';
+    const cursor = document.createElement('span');
+    cursor.className = 'cursor';
+    el.appendChild(cursor);
+
+    let i = 0;
+    const speed = Math.max(8, Math.min(25, Math.round(4000 / text.length)));
+    const interval = setInterval(() => {
+      if (i < text.length) {
+        el.insertBefore(document.createTextNode(text[i]), cursor);
+        i++;
+      } else {
+        clearInterval(interval);
+        cursor.remove();
+      }
+    }, speed);
+  }
+
+  function showError(msg) {
+    const el = document.getElementById('output-content');
+    el.classList.remove('empty');
+    el.style.color = 'var(--red)';
+    el.textContent = `⚠ ERROR: ${msg}\n\nMake sure your Flask backend is running on localhost:5000`;
+  }
+
+  function clearOutput() {
+    const el = document.getElementById('output-content');
+    el.textContent = '';
+    el.className = '';
+    el.style.color = '';
+    document.getElementById('output-wrap').className = 'output-wrap';
+  }
+
+  function showSpinner(show) {
+    document.getElementById('spinner').classList.toggle('show', show);
+  }
+
+  function setStatus(state, msg) {
+    const dot = document.getElementById('status-dot');
+    dot.className = 'status-dot ' + state;
+    document.getElementById('status-txt').textContent = msg;
+  }
+
+  function copyOutput() {
+    const text = document.getElementById('output-content').textContent;
+    if (!text || text.includes('will appear here')) return;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.textContent = 'COPIED!';
+      setTimeout(() => btn.textContent = 'COPY', 1500);
+    });
+  }
+</script>
+</body>
+</html>
